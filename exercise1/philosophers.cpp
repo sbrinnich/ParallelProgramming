@@ -9,7 +9,7 @@
 // Build: g++ -g philosophers.cpp  -o philosophers.exe
 // Execute: ./philosophers.exe
 
-// Create deadlock with e.g. parameters 3, 20, 3000
+// Created deadlock with e.g. parameters 3, 20, 20
 
 bool running = true;
 std::vector<std::mutex*> forks;
@@ -17,6 +17,10 @@ std::vector<std::mutex*> forks;
 void doPhilosopher(int index, int thinkingTime, int eatingTime) {
     srand( (unsigned)time(NULL) + index);
     std::stringstream msg;
+
+    int firstSpoonIndex = (index % 2 == 0) ? ((index + 1) % forks.size()) : index;
+    int secondSpoonIndex = (index % 2 == 0) ? index : ((index + 1) % forks.size());
+
     while(running) {
         // Think
         std::this_thread::sleep_for(std::chrono::milliseconds(rand() % thinkingTime + 1));
@@ -25,17 +29,14 @@ void doPhilosopher(int index, int thinkingTime, int eatingTime) {
         msg.str(std::string());
 
         // Take fork 1
-        forks[index]->lock();
+        forks[firstSpoonIndex]->lock();
         
         msg << "Philosopher " << index << " took first fork." << std::endl; 
         std::cout << msg.str();
         msg.str(std::string());
-
-        // Wait a little...
-        std::this_thread::sleep_for(std::chrono::seconds(1));
         
         // Take fork 2
-        forks[(index + 1) % forks.size()]->lock();
+        forks[secondSpoonIndex]->lock();
         
         msg << "Philosopher " << index << " took second fork." << std::endl; 
         std::cout << msg.str();
@@ -48,8 +49,8 @@ void doPhilosopher(int index, int thinkingTime, int eatingTime) {
         msg.str(std::string());
 
         // Put forks down
-        forks[index]->unlock();
-        forks[(index + 1) % forks.size()]->unlock();
+        forks[secondSpoonIndex]->unlock();
+        forks[firstSpoonIndex]->unlock();
     }
 }
 
@@ -92,6 +93,10 @@ int main() {
 
     for (std::thread & philosopher : philosophers) {
 	    if (philosopher.joinable()) philosopher.join();
+    }
+
+    for(int i = 0; i < n; i++) {
+        delete forks[i];
     }
 
     return 0;
