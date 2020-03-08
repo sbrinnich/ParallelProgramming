@@ -18,7 +18,17 @@
   first philosopher to finish eating and giving his forks back so the second one can eat as well).
 
 4. Measure the time spent in waiting for fork and compare it to the total runtime.
-- TODO
+- The values are almost the same over different runthroughts. The ratio of waiting time to execution time 
+  is about 0.08 - 0.12. Depends on the number of philosophers. The more Philosophers the less is the ratio 
+  of waiting time to execution time. 
+  _____________________________________________________________________________
+  The highest waiting time for an locked fork was: 1.674 ms
+  The avarage waiting time over all threads and waiting blocks: 106 ms
+  The total waiting time for all threads: 113.026 ms
+  The total execution time for all threads: 1.314.205 ms
+  The ratio of waiting time to execution time over all threads: 0.0860033 (8,6%)
+  ______________________________________________________________________________
+
 
 5. Can you think of other techniques for deadlock prevention?
 - Breaking the Hold and wait condition: putting the first fork down and think again when second fork 
