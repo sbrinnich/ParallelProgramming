@@ -5,6 +5,7 @@
 #include <vector>
 #include <sstream>
 #include <mutex>
+#include <map>
 
 // Build: g++ -g philosophers.cpp  -o philosophers.exe
 // Execute: ./philosophers.exe
@@ -14,7 +15,26 @@
 bool running = true;
 std::vector<std::mutex*> forks;
 
+auto mutexTimeSpentLocks = new std::mutex();  
+auto mutexTimeSpentWorkFlow = new std::mutex(); 
+
+auto timeSpentLocks = new std::vector<long long>();
+auto timeThreadsExecuted = new std::vector<long long>();  
+
+void addTimeSpentLocks(long long timeSpent){
+    mutexTimeSpentLocks->lock();
+    timeSpentLocks->push_back(timeSpent); 
+    mutexTimeSpentLocks->unlock();
+}
+
+void addTimeThreadExecuted(long long duration){
+    mutexTimeSpentWorkFlow->lock(); 
+    timeThreadsExecuted->push_back(duration);
+    mutexTimeSpentWorkFlow->unlock(); 
+}
+
 void doPhilosopher(int index, int thinkingTime, int eatingTime) {
+    auto timeThreadStart = std::chrono::high_resolution_clock::now(); 
     srand( (unsigned)time(NULL) + index);
     std::stringstream msg;
 
@@ -28,15 +48,36 @@ void doPhilosopher(int index, int thinkingTime, int eatingTime) {
         std::cout << msg.str();
         msg.str(std::string());
 
+        //measure time around the lock to get statistics about waiting time of the thread 
+        auto timeBeforeLock = std::chrono::high_resolution_clock::now(); 
+        
         // Take fork 1
         forks[firstSpoonIndex]->lock();
-        
+
+        auto timeAfterLock = std::chrono::high_resolution_clock::now();  
+
+        auto durationWait = std::chrono::duration_cast<std::chrono::milliseconds>(timeAfterLock - timeBeforeLock).count();
+
+        if(durationWait != 0){
+            addTimeSpentLocks(durationWait);
+        }
+
         msg << "Philosopher " << index << " took first fork." << std::endl; 
         std::cout << msg.str();
         msg.str(std::string());
         
+        timeBeforeLock = std::chrono::high_resolution_clock::now();  
+
         // Take fork 2
         forks[secondSpoonIndex]->lock();
+
+        timeAfterLock = std::chrono::high_resolution_clock::now();  
+
+        durationWait = std::chrono::duration_cast<std::chrono::milliseconds>(timeAfterLock - timeBeforeLock).count();
+
+        if(durationWait != 0){
+            addTimeSpentLocks(durationWait);
+        } 
         
         msg << "Philosopher " << index << " took second fork." << std::endl; 
         std::cout << msg.str();
@@ -52,6 +93,35 @@ void doPhilosopher(int index, int thinkingTime, int eatingTime) {
         forks[secondSpoonIndex]->unlock();
         forks[firstSpoonIndex]->unlock();
     }
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - timeThreadStart).count();
+    addTimeThreadExecuted(duration);
+}
+
+void doStatistics(){
+    long long maxWait = 0; 
+    long long sumWait = 0; 
+    for(std::size_t i = 0; i < timeSpentLocks->size(); i++){
+        long long duration = timeSpentLocks->back();
+        maxWait = (duration > maxWait) ? duration : maxWait; 
+        sumWait += duration; 
+        timeSpentLocks->pop_back(); 
+    }
+
+    auto avarageWaitTime = sumWait/timeSpentLocks->size(); 
+
+    long long sumDuration = 0; 
+    for(std::size_t i = 0; i < timeThreadsExecuted->size(); i++){
+        long long duration = timeThreadsExecuted->back();
+        sumDuration += duration; 
+    }
+
+    std::cout << "The highest waiting time for an locked fork was: " << maxWait << " ms" << std::endl; 
+    std::cout << "The avarage waiting tiem over all threads and waiting blocks: " << avarageWaitTime << " ms" << std::endl; 
+    std::cout << "The total waiting time for all threads: " << sumWait << " ms" << std::endl;
+    std::cout << "The total execution time for all threads: " << sumDuration << " ms" << std::endl;
+    
+    std::cout << "The ratio of waiting time to execution time over all threads: " << (float)sumWait/sumDuration << std::endl; 
 }
 
 int main() {
@@ -95,6 +165,8 @@ int main() {
 	    if (philosopher.joinable()) philosopher.join();
     }
 
+    doStatistics(); 
+    
     for(int i = 0; i < n; i++) {
         delete forks[i];
     }
