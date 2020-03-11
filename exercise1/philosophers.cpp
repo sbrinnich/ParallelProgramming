@@ -15,26 +15,29 @@
 bool running = true;
 std::vector<std::mutex*> forks;
 
-auto mutexTimeSpentLocks = new std::mutex();  
-auto mutexTimeSpentWorkFlow = new std::mutex(); 
+std::mutex* mutexTimeSpentLocks = new std::mutex();  
+std::mutex* mutexTimeSpentWorkFlow = new std::mutex(); 
 
-auto timeSpentLocks = new std::vector<long long>();
-auto timeThreadsExecuted = new std::vector<long long>();  
+std::vector<long long>* timeSpentLocks = new std::vector<long long>();
+long long timeThreadsExecuted = 0;  
 
-void addTimeSpentLocks(long long timeSpent){
+void addTimeSpentLocks(std::vector<long long>* timeSpent){
     mutexTimeSpentLocks->lock();
-    timeSpentLocks->push_back(timeSpent); 
+    for(auto const& value: *timeSpent) {
+        timeSpentLocks->push_back(value);
+    }
     mutexTimeSpentLocks->unlock();
 }
 
 void addTimeThreadExecuted(long long duration){
     mutexTimeSpentWorkFlow->lock(); 
-    timeThreadsExecuted->push_back(duration);
+    timeThreadsExecuted += duration;
     mutexTimeSpentWorkFlow->unlock(); 
 }
 
 void doPhilosopher(int index, int thinkingTime, int eatingTime) {
     auto timeThreadStart = std::chrono::high_resolution_clock::now(); 
+    std::vector<long long>* waitingTime = new std::vector<long long>();
     srand( (unsigned)time(NULL) + index);
     std::stringstream msg;
 
@@ -56,11 +59,7 @@ void doPhilosopher(int index, int thinkingTime, int eatingTime) {
 
         auto timeAfterLock = std::chrono::high_resolution_clock::now();  
 
-        auto durationWait = std::chrono::duration_cast<std::chrono::milliseconds>(timeAfterLock - timeBeforeLock).count();
-
-        if(durationWait != 0){
-            addTimeSpentLocks(durationWait);
-        }
+        waitingTime->push_back(std::chrono::duration_cast<std::chrono::milliseconds>(timeAfterLock - timeBeforeLock).count());
 
         msg << "Philosopher " << index << " took first fork." << std::endl; 
         std::cout << msg.str();
@@ -73,11 +72,7 @@ void doPhilosopher(int index, int thinkingTime, int eatingTime) {
 
         timeAfterLock = std::chrono::high_resolution_clock::now();  
 
-        durationWait = std::chrono::duration_cast<std::chrono::milliseconds>(timeAfterLock - timeBeforeLock).count();
-
-        if(durationWait != 0){
-            addTimeSpentLocks(durationWait);
-        } 
+        waitingTime->push_back(std::chrono::duration_cast<std::chrono::milliseconds>(timeAfterLock - timeBeforeLock).count());
         
         msg << "Philosopher " << index << " took second fork." << std::endl; 
         std::cout << msg.str();
@@ -96,32 +91,28 @@ void doPhilosopher(int index, int thinkingTime, int eatingTime) {
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - timeThreadStart).count();
     addTimeThreadExecuted(duration);
+    addTimeSpentLocks(waitingTime);
+    delete waitingTime;
 }
 
 void doStatistics(){
-    long long maxWait = 0; 
-    long long sumWait = 0; 
+    long long maxWait = 0;
+    long long sumWait = 0;
     for(std::size_t i = 0; i < timeSpentLocks->size(); i++){
         long long duration = timeSpentLocks->back();
-        maxWait = (duration > maxWait) ? duration : maxWait; 
-        sumWait += duration; 
-        timeSpentLocks->pop_back(); 
+        maxWait = (duration > maxWait) ? duration : maxWait;
+        sumWait += duration;
+        timeSpentLocks->pop_back();
     }
 
-    auto avarageWaitTime = sumWait/timeSpentLocks->size(); 
+    auto avarageWait = sumWait/timeSpentLocks->size();
 
-    long long sumDuration = 0; 
-    for(std::size_t i = 0; i < timeThreadsExecuted->size(); i++){
-        long long duration = timeThreadsExecuted->back();
-        sumDuration += duration; 
-    }
-
-    std::cout << "The highest waiting time for an locked fork was: " << maxWait << " ms" << std::endl; 
-    std::cout << "The avarage waiting tiem over all threads and waiting blocks: " << avarageWaitTime << " ms" << std::endl; 
+    std::cout << "The highest waiting time for a locked fork: " << maxWait << " ms" << std::endl;
+    std::cout << "The average waiting time for a fork: " << avarageWait << " ms" << std::endl;
     std::cout << "The total waiting time for all threads: " << sumWait << " ms" << std::endl;
-    std::cout << "The total execution time for all threads: " << sumDuration << " ms" << std::endl;
+    std::cout << "The total execution time for all threads: " << timeThreadsExecuted << " ms" << std::endl;
     
-    std::cout << "The ratio of waiting time to execution time over all threads: " << (float)sumWait/sumDuration << std::endl; 
+    std::cout << "The percentage of waiting time of the total execution time over all threads: " << (float)sumWait/timeThreadsExecuted << std::endl; 
 }
 
 int main() {
@@ -165,11 +156,17 @@ int main() {
 	    if (philosopher.joinable()) philosopher.join();
     }
 
+    // Output statistics of run
     doStatistics(); 
     
+    // Clear memory
     for(int i = 0; i < n; i++) {
         delete forks[i];
     }
+
+    delete mutexTimeSpentLocks;
+    delete mutexTimeSpentWorkFlow;
+    delete timeSpentLocks;
 
     return 0;
 }

@@ -18,15 +18,26 @@
   first philosopher to finish eating and giving his forks back so the second one can eat as well).
 
 4. Measure the time spent in waiting for fork and compare it to the total runtime.
-- The values are almost the same over different runthroughts. The ratio of waiting time to execution time 
-  is about 0.08 - 0.12. Depends on the number of philosophers. The more Philosophers the less is the ratio 
-  of waiting time to execution time. 
+- The values are almost the same over different runthroughs. The percentage of waiting time of the total 
+  execution time is about 15%, although this depends (mainly) on the number of philosophers. 
+  The more Philosophers the higher the total waiting time compared to the execution time. 
+
+  Execution with Parameters 20, 20, 20:
   _____________________________________________________________________________
-  The highest waiting time for an locked fork was: 1.674 ms
-  The avarage waiting time over all threads and waiting blocks: 106 ms
-  The total waiting time for all threads: 113.026 ms
-  The total execution time for all threads: 1.314.205 ms
-  The ratio of waiting time to execution time over all threads: 0.0860033 (8,6%)
+  The highest waiting time for a locked fork: 84 ms
+  The average waiting time for a fork: 7 ms
+  The total waiting time for all threads: 14051 ms
+  The total execution time for all threads: 98798 ms
+  The percentage of waiting time of the total execution time over all threads: 0.142219 (14.2%)
+  ______________________________________________________________________________
+
+  Execution with parameters 100, 20, 20:
+  _____________________________________________________________________________
+  The highest waiting time for a locked fork: 107 ms
+  The average waiting time for a fork: 11 ms
+  The total waiting time for all threads: 112503 ms
+  The total execution time for all threads: 717402 ms
+  The percentage of waiting time of the total execution time over all threads: 0.15682 (15.7%)
   ______________________________________________________________________________
 
 
